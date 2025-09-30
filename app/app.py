@@ -1,86 +1,63 @@
 import os
 import pickle
-from pathlib import Path
-from typing import Any, Dict
-
-from flask import Flask, jsonify, render_template_string, request
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MODEL_PATH = PROJECT_ROOT / "models" / "regmodel.pkl"
+import pandas as pd
+import numpy as np
+from flask import Flask, request, jsonify, render_template
 
 
-def load_model(model_path: Path) -> Any:
-	if not model_path.exists():
-		raise FileNotFoundError(f"Model file not found at: {model_path}")
-	with open(model_path, "rb") as f:
-		return pickle.load(f)
+app = Flask(__name__, template_folder="../templates")
+
+# Load model and scaler at startup
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "regmodel.pkl")
+SCALER_PATH = os.path.join(BASE_DIR, "models", "scaling.pkl")
+
+with open(MODEL_PATH, "rb") as f:
+	regmodel = pickle.load(f)
+
+with open(SCALER_PATH, "rb") as f:
+	scalar = pickle.load(f)
+
+# Fixed feature order to align with training/scaler
+FEATURE_ORDER = [
+	"CRIM","ZN","INDUS","CHAS","NOX","RM","AGE","DIS",
+	"RAD","TAX","PTRATION","B","LSTAT"
+]
+
+@app.route("/")
+def home():
+	return render_template('home.html')
 
 
-def create_app() -> Flask:
-	app = Flask(__name__)
+@app.route("/predict", methods=["GET","POST"])
+def predict_api():
+	if request.method == "GET":
+		return jsonify({"message": "POST a JSON body to /predict with key 'data', or submit the HTML form on /"})
 
-	# Load model once at startup
-	app.config["MODEL"] = load_model(MODEL_PATH)
-
-	@app.get("/health")
-	def health() -> Dict[str, str]:
-		return {"status": "ok"}
-
-	@app.get("/")
-	def index():
-		# Minimal form for quick manual testing
-		html = """
-		<!doctype html>
-		<title>House Price Prediction</title>
-		<h1>Predict</h1>
-		<form method="post" action="/predict">
-		  <input name="feature1" placeholder="feature1" required />
-		  <input name="feature2" placeholder="feature2" required />
-		  <button type="submit">Predict</button>
-		</form>
-		"""
-		return render_template_string(html)
-
-	@app.post("/predict")
-	def predict():
-		model = app.config.get("MODEL")
-		if model is None:
-			return jsonify({"error": "Model not loaded"}), 500
-
-		# Accept JSON or form data
-		if request.is_json:
-			data = request.get_json(silent=True) or {}
-		else:
-			data = request.form.to_dict()
-
+	# If the request came from an HTML form submission
+	if request.form:
 		try:
-			# Example expects two numeric features. Adjust to your model inputs.
-			feature1 = float(data.get("feature1"))
-			feature2 = float(data.get("feature2"))
-		except (TypeError, ValueError):
-			return jsonify({"error": "Invalid or missing features"}), 400
-
-		# Build input shape expected by scikit-learn: [[f1, f2, ...]]
-		features = [[feature1, feature2]]
-		try:
-			prediction = model.predict(features)
-		except Exception as exc:
-			return jsonify({"error": f"Prediction failed: {exc}"}), 500
-
-		# Convert numpy types to Python native
-		pred_value = prediction[0] if isinstance(prediction, (list, tuple)) else prediction
-		try:
-			pred_value = float(pred_value)
+			data = [float(request.form[name]) for name in FEATURE_ORDER]
 		except Exception:
-			pred_value = str(pred_value)
+			return render_template('home.html', prediction_text="Invalid input. Please enter numeric values." )
+		final_input = scalar.transform(np.array(data).reshape(1,-1))
+		output = regmodel.predict(final_input)[0]
+		return render_template('home.html', prediction_text=f"The House price prediction is {output}")
 
-		return jsonify({"prediction": pred_value})
+	# Fallback: JSON API
+	payload = request.get_json(silent=True) or {}
+	if 'data' not in payload:
+		return jsonify({"error": "Missing 'data' in JSON body"}), 400
+	data_dict = payload['data']
+	new_data = scalar.transform(np.array([data_dict[name] for name in FEATURE_ORDER]).reshape(1,-1))
+	output = regmodel.predict(new_data)
+	return jsonify(output[0])
 
-	return app
-
+# Alias path if user calls /predict_api directly
+@app.route("/predict_api", methods=["POST"])
+def predict_api_alias():
+	return predict_api()
 
 if __name__ == "__main__":
 	port = int(os.environ.get("PORT", 5000))
-	app = create_app()
 	app.run(host="0.0.0.0", port=port, debug=True)

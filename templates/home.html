@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>House Price Prediction</title>
+	<style>
+		:root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb; --brand:#22c55e; }
+		* { box-sizing: border-box; }
+		body { margin:0; padding:2rem; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:linear-gradient(135deg,#0b1021,#111827 35%,#0b1021); color:var(--text); }
+		.container { max-width:960px; margin:0 auto; }
+		.card { background:rgba(17,24,39,.85); border:1px solid rgba(148,163,184,.15); border-radius:14px; padding:1.25rem; box-shadow:0 10px 30px rgba(0,0,0,.35); backdrop-filter: blur(6px); }
+		h1 { margin:.25rem 0 1rem; font-weight:700; letter-spacing:.2px; }
+		.sub { color:var(--muted); margin-bottom:1.25rem; }
+		.grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; }
+		@media (max-width:720px){ .grid { grid-template-columns:1fr; } }
+		.field { display:flex; flex-direction:column; gap:6px; }
+		label { font-size:.9rem; color:#cbd5e1; }
+		input { background:#0b1220; border:1px solid rgba(148,163,184,.25); color:var(--text); border-radius:10px; padding:.7rem .85rem; outline:none; transition:border .2s ease, box-shadow .2s ease; }
+		input:focus { border-color:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,.2); }
+		.actions { display:flex; gap:10px; margin-top:1rem; align-items:center; }
+		button { padding:.75rem 1rem; border-radius:10px; border:1px solid rgba(148,163,184,.25); background:linear-gradient(180deg,#22c55e,#16a34a); color:#06220f; font-weight:700; cursor:pointer; }
+		button:hover { filter:brightness(1.05); }
+		.result { margin-top:1rem; font-weight:700; font-size:1.05rem; }
+		.help { color:var(--muted); font-size:.9rem; }
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="card">
+			<h1>Boston House Price Prediction</h1>
+			<p class="sub">Enter feature values and submit to get a prediction.</p>
+			<form method="post" action="/predict">
+				<div class="grid">
+					<div class="field">
+						<label for="CRIM">CRIM (per capita crime rate)</label>
+						<input id="CRIM" name="CRIM" type="number" step="any" placeholder="0.00632" required />
+					</div>
+					<div class="field">
+						<label for="ZN">ZN (% residential land >25k sqft)</label>
+						<input id="ZN" name="ZN" type="number" step="any" placeholder="18.0" required />
+					</div>
+					<div class="field">
+						<label for="INDUS">INDUS (% non-retail business acres)</label>
+						<input id="INDUS" name="INDUS" type="number" step="any" placeholder="2.31" required />
+					</div>
+					<div class="field">
+						<label for="CHAS">CHAS (Charles River dummy 0/1)</label>
+						<input id="CHAS" name="CHAS" type="number" step="1" min="0" max="1" placeholder="0" required />
+					</div>
+					<div class="field">
+						<label for="NOX">NOX (nitric oxides concentration)</label>
+						<input id="NOX" name="NOX" type="number" step="0.001" placeholder="0.538" required />
+					</div>
+					<div class="field">
+						<label for="RM">RM (avg rooms per dwelling)</label>
+						<input id="RM" name="RM" type="number" step="0.001" placeholder="6.575" required />
+					</div>
+					<div class="field">
+						<label for="AGE">AGE (% built prior to 1940)</label>
+						<input id="AGE" name="AGE" type="number" step="0.1" placeholder="65.2" required />
+					</div>
+					<div class="field">
+						<label for="DIS">DIS (distance to employment centers)</label>
+						<input id="DIS" name="DIS" type="number" step="0.001" placeholder="4.09" required />
+					</div>
+					<div class="field">
+						<label for="RAD">RAD (accessibility to radial highways)</label>
+						<input id="RAD" name="RAD" type="number" step="1" min="1" placeholder="1" required />
+					</div>
+					<div class="field">
+						<label for="TAX">TAX (property tax rate)</label>
+						<input id="TAX" name="TAX" type="number" step="1" placeholder="296" required />
+					</div>
+					<div class="field">
+						<label for="PTRATION">PTRATION (pupil-teacher ratio)</label>
+						<input id="PTRATION" name="PTRATION" type="number" step="0.01" placeholder="15.3" required />
+					</div>
+					<div class="field">
+						<label for="B">B (1000(Bk - 0.63)^2)</label>
+						<input id="B" name="B" type="number" step="0.01" placeholder="396.90" required />
+					</div>
+					<div class="field">
+						<label for="LSTAT">LSTAT (% lower status population)</label>
+						<input id="LSTAT" name="LSTAT" type="number" step="0.01" placeholder="4.98" required />
+					</div>
+				</div>
+				<div class="actions">
+					<button type="submit">Predict</button>
+					<span class="help">Ensure values are numeric and in model's expected units.</span>
+				</div>
+			</form>
+
+			{% if prediction_text %}
+				<p class="result">{{ prediction_text }}</p>
+			{% endif %}
+		</div>
+	</div>
+</body>
+</html>
